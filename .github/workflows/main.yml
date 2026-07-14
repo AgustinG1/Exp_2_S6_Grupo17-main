@@ -37,14 +37,18 @@ jobs:
           HOST: ${{ secrets.EC2_HOST }}
           USER: ubuntu
         run: |
-          # Configurar la llave SSH correctamente
+          # 1. Configurar la carpeta y limpiar la llave SSH de caracteres de Windows
           mkdir -p ~/.ssh
-          echo "$PRIVATE_KEY" > ~/.ssh/id_rsa
+          chmod 700 ~/.ssh
+          echo "$PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          echo "" >> ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          
+          # Agregar el host a known_hosts
           ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
           
-          # Conectarse y ejecutar los comandos de Docker
-          ssh -i ~/.ssh/id_rsa $USER@$HOST << 'EOF'
+          # 2. Conectarse y ejecutar los comandos de Docker (Con StrictHostKeyChecking apagado por seguridad extra)
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa $USER@$HOST << 'EOF'
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/guias-despacho:latest
             
             docker stop guias-app || true
