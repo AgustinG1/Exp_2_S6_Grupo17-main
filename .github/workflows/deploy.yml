@@ -1,0 +1,78 @@
+name: Deploy to EC2
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Image"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Configure SSH key file
+        env:
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$EC2_SSH_KEY" | sed 's/\r$//' > ~/.ssh/ec2_deploy_key
+          chmod 600 ~/.ssh/ec2_deploy_key
+          ssh-keygen -y -f ~/.ssh/ec2_deploy_key > /dev/null
+          echo "✅ Clave SSH validada correctamente"
+
+      - name: Test SSH connection to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+        run: |
+          EC2_HOST="$(echo "$EC2_HOST" | tr -d '[:space:]')"
+          echo "Conectando como: ubuntu@${EC2_HOST}"
+          ssh -i ~/.ssh/ec2_deploy_key \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o BatchMode=yes \
+            "ubuntu@${EC2_HOST}" "echo SSH_OK && whoami && hostname"
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+          AZURE_ISSUER_URI: ${{ secrets.AZURE_ISSUER_URI }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+        run: |
+          EC2_HOST="$(echo "$EC2_HOST" | tr -d '[:space:]')"
+          SSH_BASE=(ssh -i ~/.ssh/ec2_deploy_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null)
+          TARGET="ubuntu@${EC2_HOST}"
+
+          # Login a Docker Hub en la EC2
+          "${SSH_BASE[@]}" "$TARGET" "echo '${DOCKERHUB_TOKEN}' | docker login -u '${DOCKERHUB_USERNAME}' --password-stdin"
+
+          # Pull de la imagen
+          "${SSH_BASE[@]}" "$TARGET" "docker pull '${DOCKERHUB_USERNAME}/guias-despacho:latest'"
+
+          # Detener y eliminar contenedor anterior
+          "${SSH_BASE[@]}" "$TARGET" "docker stop guias-app 2>/dev/null || true; docker rm guias-app 2>/dev/null || true"
+
+          # Levantar nuevo contenedor
+          "${SSH_BASE[@]}" "$TARGET" "docker run -d --name guias-app --restart unless-stopped -p 8080:8080 \
+            -e AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID}' \
+            -e AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY}' \
+            -e AWS_SESSION_TOKEN='${AWS_SESSION_TOKEN}' \
+            -e AWS_REGION='${AWS_REGION}' \
+            -e AWS_S3_BUCKET_NAME='${AWS_S3_BUCKET_NAME}' \
+            -e AZURE_ISSUER_URI='${AZURE_ISSUER_URI}' \
+            -e CLIENT_ID='${CLIENT_ID}' \
+            '${DOCKERHUB_USERNAME}/guias-despacho:latest'"
+
+          # Verificar que el contenedor esté corriendo
+          "${SSH_BASE[@]}" "$TARGET" "docker ps"
+          echo "✅ Deploy completado en EC2"
