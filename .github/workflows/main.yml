@@ -36,7 +36,7 @@ jobs:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
           # CAMBIO CRÍTICO: Usualmente en AWS Academy el usuario es ec2-user
-          USER: ec2-user 
+          USER: ubuntu 
         run: |
           # 1. Configurar la carpeta y limpiar la llave SSH
           mkdir -p ~/.ssh
