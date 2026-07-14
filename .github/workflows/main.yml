@@ -31,12 +31,18 @@ jobs:
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/guias-despacho:latest .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/guias-despacho:latest
 
+      - name: Prepare SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | sed 's/\\n/\n/g' > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.USER_SERVER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
+          key_path: ~/.ssh/ec2_key
           script: |
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/guias-despacho:latest
             docker stop guias-app || true
