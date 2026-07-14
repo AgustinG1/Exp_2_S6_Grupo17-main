@@ -35,7 +35,7 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
-          # CAMBIO CRÍTICO: Usualmente en AWS Academy el usuario es ec2-user
+          # CAMBIO CRÍTICO: Para esta instancia en particular comprobamos que el usuario es ubuntu
           USER: ubuntu 
         run: |
           # 1. Configurar la carpeta y limpiar la llave SSH
