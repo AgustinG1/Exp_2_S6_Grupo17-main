@@ -46,7 +46,7 @@ jobs:
           AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
-          AZURE_ISSUER_URI: ${{ secrets.AZURE_ISSUER_URI }}
+          AZURE_JWK_SET_URI: ${{ secrets.AZURE_JWK_SET_URI }}
           CLIENT_ID: ${{ secrets.CLIENT_ID }}
         run: |
           EC2_HOST="$(echo "$EC2_HOST" | tr -d '[:space:]')"
@@ -69,7 +69,7 @@ jobs:
             -e AWS_SESSION_TOKEN='${AWS_SESSION_TOKEN}' \
             -e AWS_REGION='${AWS_REGION}' \
             -e AWS_S3_BUCKET_NAME='${AWS_S3_BUCKET_NAME}' \
-            -e AZURE_ISSUER_URI='${AZURE_ISSUER_URI}' \
+            -e AZURE_JWK_SET_URI='${AZURE_JWK_SET_URI}' \
             -e CLIENT_ID='${CLIENT_ID}' \
             '${DOCKERHUB_USERNAME}/guias-despacho:latest'"
 
