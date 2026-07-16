@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -39,8 +41,14 @@ public class GuiaDespachoController {
     private final AwsS3Service awsS3Service;
     private final EfsService efsService;
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
     @Value("${aws.s3.bucket.name:grupo17-bucket}")
     private String defaultBucket;
+
+    @Value("${guia.rabbitmq.queue}")
+    private String queueName;
 
     /**
      * Generar guía y subir a EFS + S3.
@@ -68,6 +76,10 @@ public class GuiaDespachoController {
 
             // Upload to S3
             awsS3Service.uploadBytes(defaultBucket, s3Key, pdfBytes, "application/pdf");
+
+            // Enviar mensaje asíncrono a RabbitMQ
+            String mensaje = "Nueva guía generada con ID: " + request.getId() + " con destino a: " + request.getDestino();
+            rabbitTemplate.convertAndSend(queueName, mensaje);
 
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new GuiaDespachoResponse(request.getId(), request.getTransportista(), s3Key, null, "Guía generada y subida exitosamente"));
