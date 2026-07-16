@@ -71,6 +71,7 @@ jobs:
             -e AWS_S3_BUCKET_NAME='${AWS_S3_BUCKET_NAME}' \
             -e AZURE_JWK_SET_URI='${AZURE_JWK_SET_URI}' \
             -e CLIENT_ID='${CLIENT_ID}' \
+            -e RABBITMQ_HOST='172.17.0.1' \
             '${DOCKERHUB_USERNAME}/guias-despacho:latest'"
 
           # Verificar que el contenedor esté corriendo
